@@ -1,0 +1,19 @@
+Link
+https://archive.ics.uci.edu/dataset/560/seoul%2Bbike%2Bsharing%2Bdemand?utm_source=chatgpt.com
+
+Additional Variable Information
+Date : year-month-day / 년월일
+Rented Bike count - Count of bikes rented at each hour / 매 시간마다 대여된 자전거 수
+Hour - Hour of he day / 시간대
+Temperature-Temperature in Celsius / 온도(섭씨)
+Humidity - % / 습도
+Windspeed - m/s / 풍속
+Visibility - 10m / 가시거리
+Dew point temperature - Celsius / 이슬점 온도(섭씨)
+Solar radiation - MJ/m2 / 태양 복사열
+Rainfall - mm / 강수량
+Snowfall - cm / 적설량
+Seasons - Winter, Spring, Summer, Autumn / 계절
+Holiday - Holiday/No holiday / 휴일
+Functional Day - NoFunc(Non Functional Hours), Fun(Functional hours) 
+                            - 비기능 / 기능
