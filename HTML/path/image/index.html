@@ -1,0 +1,33 @@
+<style>
+  body > div {
+    display: flex;
+    flex-direction: column;
+  }
+  div > div {
+    display: flex;
+    justify-content: space-evenly;
+  }
+  div + div {
+    margin-top: 20px;
+  }
+</style>
+<body>
+  <div>
+    <div class="spring">
+      <img src="../spring/1.png">
+      <img src="../../../../path/spring/2.png">  <!-- ../를 여러번 써도 최상위면 변화없음 -->
+    </div>
+    <div class="summer">
+      <img src="/path/summer/1.png">   <!-- 처음부터 /를 쓰면 최상위로 간다 -->
+      <img src="/../../path/summer/2.png">
+    </div>
+    <div class="fall">
+      <img src="http:127.0.0.1:5500/path/fall/1.png">   <!-- 절대경로 지정 -->
+      <img src="fall/2.png">
+    </div>
+    <div class="winter">
+      <img src="winter/1.png">
+      <img src="winter/2.png">
+    </div>
+  </div>
+</body>
