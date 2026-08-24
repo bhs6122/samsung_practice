@@ -1,0 +1,59 @@
+<style>
+    body {
+        background-color: #f0f0f0;
+        font-family: sans-serif;
+    }
+
+    .card {
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
+        /* 배경색 white, 테두리 2px solid lightgray, 모서리 둥글게 15px */
+        background-color: white;
+        border: 2px solid lightgray;
+        border-radius: 15px;
+        /* 화면 중앙에 위치 margin 사용 */
+        margin: 0 auto;
+        /* 카드 크기: 가로 300px, 세로 400px */
+        width: 300px; height: 400px;
+    }
+
+    .profile-img {
+        margin: 0 auto 20px auto;
+        /* 상단에는 프로필 이미지가 원형으로 표시 */
+        /* 크기: 100px × 100px */
+        /* 이미지: http://ggoreb.com/images/Portrait_Placeholder.png */
+        /* 이미지가 박스 안에서 잘리지 않고 꽉 차도록 배치 (background-size: cover) */
+    }
+
+    /* .name {
+        이름(h2)은 글자 크기 1.3rem, 굵게 표시
+    }*/
+    
+
+    .desc {
+        margin: 15px 0 25px 0;
+        /* 설명(p)은 글자 크기 0.9rem, 회색(gray)으로 표시 */
+    }
+
+    .follow-btn {
+        border: none;
+        font-size: 1rem;
+        cursor: pointer;
+        /* 버튼(Follow) 가로 100px, 세로 40px */
+        /* 배경색 lightblue, 모서리 둥글게 10px */
+    }
+
+    /* 마우스를 올리면(s:hover) 배경색이 skyblue로 바뀌도록 설정 */
+</style>
+
+<body>
+    <div class="card">
+        <div class="profile-img"></div>
+        <h2 class="name">홍길동</h2>
+        <p class="desc">안녕하세요
+            <br>CSS 박스모델 연습중입니다.
+        </p>
+        <button class="follow-btn">Follow</button>
+    </div>
+</body>

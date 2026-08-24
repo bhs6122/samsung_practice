@@ -1,0 +1,57 @@
+<!-- 연습문제
+●결과와 같이 보여지도록 코드 작성하기-3개의 박스를 가로로 배치
+        -flex-direction, justify-content, align-items 사용
+        - 기본 코드
+<style>
+    .container {
+        display: flex;
+        height: 150px;
+        border: 1px solid gray;
+    }
+
+    .container > div {
+        width: 100px;
+        height: 50px;
+        background-color: lightblue;
+        text-align: center;
+        line-height: 50px;
+        border: 1px solid navy;
+    }
+</style>
+
+<body>
+    <div class="container">
+        <div>A</div>
+        <div>B</div>
+        <div>C</div>
+        </div>
+</body> -->
+
+
+<style>
+    .container {
+        display: flex;
+        height: 150px;
+        border: 1px solid gray;
+        align-items: end;
+        justify-content: space-around;
+        flex-direction: row-reverse;
+    }
+
+    .container > div {
+        width: 100px;
+        height: 50px;
+        background-color: lightblue;
+        text-align: center;
+        line-height: 50px;
+        border: 1px solid navy;
+    }
+</style>
+
+<body>
+    <div class="container">
+        <div>A</div>
+        <div>B</div>
+        <div>C</div>
+        </div>
+</body>

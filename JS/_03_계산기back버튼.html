@@ -1,0 +1,22 @@
+<body>
+    <input type="text">
+    <button>Back</button>
+    <script>
+        // 버튼 지정(선택)
+        const button = document.querySelector('button')
+        // 버튼 클릭했을때 동작할 코드를 정의
+        //                  어떤 이벤트?, 동작할 코드
+        button.addEventListener('click', () => {
+            const input = document.querySelector('input')
+            // alert(input.value)
+            let length = input.value.length
+            let v = input.value.substring(0, length -1)
+            input.value = v
+            // 23456789 9글자
+            // length -> 9
+            // input.value[0:9] -> 0에서 8번 인덱스 값
+            // input.value[0:9-1] -> 0에서 7번 인덱스 값
+            //          0부터 length-1까지
+        })
+    </script>
+</body>

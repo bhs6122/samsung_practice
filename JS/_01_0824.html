@@ -1,0 +1,35 @@
+<!-- <!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <p id="demo">text</p>
+    <button type="button" onclick="change()">change</button>
+    <script>
+        function change() {
+            // document.querySelector()는 공식같은거임 그냥 외워라
+            document.querySelector("#demo").innerHTML = "change";
+        }
+    </script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html>
+
+<body>
+    <p id="demo">text</p>
+    <button type="button" onclick="change()">change</button>
+    <script>
+        // 글자 크기를 2배로 키워주세요
+        function change() {
+            p = document.querySelector("p")
+            console.dir(p)
+            p.style.color = 'red'
+            p.style.fontsize = '2rem'
+            document.querySelector("p").innerHTML = "change<img src='http://ggoreb.com/images/nami.jpg'>";
+        }
+    </script>
+</body>
+
+</html>

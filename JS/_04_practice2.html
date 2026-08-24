@@ -1,0 +1,45 @@
+<!-- 연습문제 - 문자
+입력한 URL에서 다음 정보를 추출하기
+
+1. 프로토콜 (http, https)
+2. 도메인 (예: example.com)
+3. 파라미터 문자열 (예: id=123&name=kim) -->
+
+<!-- <body>
+    <script>
+        const url = 'https://example.com/page?id=123&name=kim';
+
+        // 프로토콜 추출
+        const protocol = '코드 작성';
+
+        // 도메인 추출
+        const domain = '코드 작성';
+
+        // 파라미터 추출
+        const params = '코드 작성';
+
+        console.log(`프로토콜: ${protocol}\n도메인: ${domain}\n파라미터: ${params}`);
+    </script>
+</body> -->
+
+<body>
+    <script>
+        //           012345
+        const url = 'https://example.com/page?id=123&name=kim';
+
+        // 프로토콜 추출
+        let idx = url.indexOf('://')    // 5번이 나올거임
+        const protocol = url.substring(0, idx);
+
+        // 도메인 추출
+        let idx2 = url.indexOf('/', idx + 3)
+        //              idx ~ ??
+        const domain = url.substring(idx + 3, idx2);
+
+        // 파라미터 추출 
+        let idx3 = url.indexOf('?')
+        const params = url.substring(idx3);
+
+        console.log(`프로토콜: ${protocol}\n도메인: ${domain}\n파라미터: ${params}`);
+    </script>
+</body>

@@ -1,0 +1,105 @@
+<!-- 문제 풀이 완 -->
+<style>
+    header {
+        font-size: 1.5rem;
+        font-weight: bold;
+        z-index: 10;
+        /* 스크롤해도 header는 항상 화면 상단에 고정 */
+        position: fixed;
+        top: 0;
+        left: 0;
+        /* 가로 100%, 높이 60px */
+        width: 100%;
+        height: 60px;
+        /* 배경색 navy, 글자 흰색, 가운데 정렬 */
+        background-color: navy;
+        color: white;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .content {
+        background-color: lightgray;
+        padding: 40px;
+        box-sizing: border-box;
+        /* 본문(.content)과 header가 겹치지 않도록 header의 높이만큼 상단 여백 지정 */
+        margin-top: 60px;
+        /* 본문 내부의 각 박스는 1:1:1 배치, 요소간격 30px, 정렬 */
+        display: flex;
+        gap: 30px;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .box {
+        transition: transform 0.3s ease;
+        background-color: white;
+        border-radius: 12px;
+        padding: 15px;
+        /* 가로 300px, 세로 300px*/
+        width: 300px; height: 300px;
+        /* flex column 배치, 정렬 */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .box img {
+        object-fit: contain;
+        border-radius: 8px;
+        width: 80%;
+        height: 150px;
+    }
+
+    .box h2 {
+        font-size: 1.2rem;
+        margin: 10px 0;
+    }
+
+    .box button {
+        width: 120px;
+        height: 40px;
+        background-color: tomato;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .box button:hover {
+        background-color: darkred;
+    }
+
+    .box:hover {
+        transform: scale(1.05);
+        /* hover 확대 효과 */
+    }
+</style>
+
+<body>
+    <header>
+        <h1>Food Delivery</h1>
+    </header>
+    <main class="content">
+        <div class="box">
+            <img src="http://ggoreb.com/images/food/a.png" alt="햄버거">
+            <h2>햄버거 세트</h2>
+            <button>주문하기</button>
+        </div>
+        <div class="box">
+            <img src="http://ggoreb.com/images/food/b.png" alt="피자">
+            <h2>피자 콤보</h2>
+            <button>주문하기</button>
+        </div>
+        <div class="box">
+            <img src="http://ggoreb.com/images/food/c.png" alt="초밥">
+            <h2>초밥 모둠</h2>
+            <button>주문하기</button>
+        </div>
+    </main>
+</body>

@@ -1,0 +1,121 @@
+<style>
+  body {
+    margin: 0; background-color: #f5f5f5;
+  }
+
+  .site {
+    height: 100vh; padding: 0 50px;
+    /* Flexbox 속성 작성 */
+  }
+
+  header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    background-color: #333;
+    color: white; height: 80px;
+    /* Flexbox 속성 및 position 작성 */
+    text-align: center;
+    padding-top: 0px;
+  }
+
+  header .login {
+    background: tomato;
+    border: none; color: white;
+    padding: 8px 15px; cursor: pointer;
+    /* 로그인 버튼 위치 설정 */
+    position: absolute;
+    right: 20px;
+
+  }
+
+  .main-content {
+    margin: 20px 0; background-color: #fff;
+    /* Flexbox 속성 작성 */
+    display: flex;
+  }
+
+  .sidebar {
+    width: 150px; color: gray;
+    padding: 20px; overflow-y: auto;
+    display: inline-block;
+    vertical-align: top;
+  }
+
+  .sidebar ul {
+    list-style: none; padding: 0;
+  }
+
+  .sidebar li {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+  }
+
+  .flex-wrapper {
+    flex: 1;
+    background-color: #eee; padding: 20px;
+    /* Flexbox 속성 작성 */
+    /* width: calc(100% - 235px); */
+    display: flex;
+    justify-content: space-around;
+    vertical-align: top;
+  }
+
+  .card {
+    position: relative;
+    display: inline-block;
+    width: 120px;
+    background-color: steelblue;
+    color: white; margin: 0 10px;
+    height: 200px; border-radius: 8px;
+    /* Flexbox 속성 및 position 작성 */
+  }
+
+  .card .badge {
+    position: absolute;
+    right: 0;
+    background-color: tomato; font-size: 12px;
+    padding: 5px 10px; border-radius: 4px;    
+    /* 배지 위치 설정 */
+    width: 25px;
+  }
+
+  footer {
+    background-color: #333;
+    color: white; height: 60px;
+    /* Flexbox 속성 작성 */
+  }
+</style>
+</head>
+<body>
+  <div class="site">
+    <header>
+      <div class="logo">MySite</div>
+      <button class="login">Login</button>
+    </header>
+
+    <div class="main-content">
+      <nav class="sidebar">
+        <ul>
+          <li>Menu 1</li><li>Menu 2</li><li>Menu 3</li>
+          <li>Menu 4</li><li>Menu 5</li>
+        </ul>
+      </nav>
+
+      <div class="flex-wrapper">
+        <div class="card">
+          Card A
+          <div class="badge">New</div>
+        </div>
+        <div class="card">Card B</div>
+        <div class="card">
+          Card C
+          <div class="badge">Hot</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>© 2025 MySite. All rights reserved.</footer>
+  </div>
+</body>
