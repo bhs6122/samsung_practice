@@ -1,0 +1,48 @@
+<!-- Callback -->
+
+<!-- <body>
+    <div id="result"></div>
+    <script>
+        const result = document.querySelector("#result");
+        function eat(callback) {
+            setTimeout(() => {
+                console.log('밥을 먹어요');
+                result.innerHTML += `<p>밥을 먹어요</p>`;
+                callback();
+            }, 1000);
+        }
+        function wash() {
+            setTimeout(() => {
+                console.log('설거지를 해요');
+                result.innerHTML += `<p>설거지를 해요</p>`;
+            }, 1000);
+        }
+        eat(wash);
+    </script>
+</body> -->
+
+
+<body>
+    <div id="result"></div>
+    <script>
+        const result = document.querySelector("#result");
+        function eat(callback) {
+            setTimeout(() => {
+                console.log('밥을 먹어요');
+                result.innerHTML += `<p>밥을 먹어요</p>`;
+                callback();
+            }, 1000);
+        }
+        function wash() {
+            setTimeout(() => {
+                console.log('설거지를 해요');
+                result.innerHTML += `<p>설거지를 해요</p>`;
+            }, 1000);
+        }
+        eat(() => wash(
+            () => {
+                result.innerHTML += `<p>종료</p>`;
+            }
+        ));
+    </script>
+</body>

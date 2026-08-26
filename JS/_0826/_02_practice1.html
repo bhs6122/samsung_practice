@@ -1,0 +1,22 @@
+<!-- 
+■연습문제(06-연습문제2.html)
+●처음과마지막요소의위치변경하기(pop / shift / push / unshift) -->
+<!-- 
+<body>
+    <script>
+        const array = [1, 2, 3, 4, 5];
+
+    </script>
+</body> -->
+
+<body>
+    <script>
+        const array = [1, 2, 3, 4, 5];
+        const first = array.shift()
+        const last = array.pop()
+        console.log(array);
+        array.push(first)
+        array.unshift(last)
+        console.log(array);
+    </script>
+</body>

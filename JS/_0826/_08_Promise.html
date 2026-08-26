@@ -1,0 +1,36 @@
+<!-- 
+■Promise
+●Producer (데이터 제공자) - Promise 객체 
+
+이거도 중요함
+-->
+
+<!-- <body>
+    <script>
+        // 비동기 작업을 위해서 Promise 사용
+        // 콜백 지옥을 벗어나기 위해서
+        const p = new Promise((res, rej) => {
+            // res('완료')
+            rej('실패')
+        })
+    </script>
+</body> -->
+
+
+
+<body>
+    <script>
+        console.log(1);
+        const p = new Promise((res, rej) => {
+            setTimeout(() => {
+                console.log('p');
+                res('완료')
+            }, 3000)
+            //rej('실패')
+        })
+        p.then(() => {
+            console.log('Promise 완료')
+        })
+        console.log(2);
+    </script>
+</body>

@@ -1,0 +1,26 @@
+<body></body>
+
+<script>
+    //JS_동기, 20비동기, 20블로킹, 20논블로킹.pdf
+    // 비동기로 동작하는 함수
+    setTimeout(() => {console.log(1)}, 500)
+
+    console.log(2);
+
+    // 07.JSON_콜백_비동기처리.pdf
+    // 객체를 문자형태로 바꾸는 것을 시리얼라이즈(Serialize) 즉 직렬화 라고 한다.
+    //                                          = Mashalling이라고도 한다.
+    // 문자를 다시 객체로 복구하는것을 디시리얼라이즈(Deserialize) 즉 역직렬화(= 복구, 복원)
+    // 
+    const json = {
+        'key': 'value',
+        'a': [1, 2, 3, 4]
+    }
+    // ify <- 00으로 바꾼다 00화
+    // string ify   json을 string으로 바꾼다
+    const text = JSON.stringify(json)
+    // 왜 바꾸는데?
+    // 바꾼값을 다른곳에 전달해줄려고 바꾼다. 벡엔드에 데이터를 전송시키려고
+    console.log(json);
+    console.log(text);
+</script>
