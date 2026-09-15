@@ -1,0 +1,9 @@
+jupyter
+fastapi
+uvicorn
+python-multipart
+chromadb 
+openai 
+python-dotenv
+jinja2
+pydantic
