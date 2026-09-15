@@ -1,0 +1,22 @@
+# 파이썬 캐시 (자동 생성물, 올릴 필요 없음)
+__pycache__/
+*.pyc
+*.pyo
+
+# 주피터 노트북 체크포인트 (자동 저장본)
+.ipynb_checkpoints/
+
+# 가상환경
+venv/
+.venv/
+env/
+
+# API 키 / 비밀값 (절대 올리지 말 것)
+.env
+*.env
+*key*.txt
+*키*.txt
+
+# OS 자동 생성 파일
+.DS_Store
+Thumbs.db
