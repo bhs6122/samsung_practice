@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>야드 이송 최적화</title>
+<style>
+  :root{
+    --bg:#0e1420; --panel:#161e2e; --panel2:#1e2739; --edge:#26314a;
+    --text:#e8edf6; --muted:#93a1bd; --accent:#3d8bff; --accent2:#00c2a8;
+    --warn:#ffb020; --danger:#ff5470; --ok:#37d67a;
+    --street:#39445e; --route:#4aa3ff; --route-case:#12386e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Malgun Gothic','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+  header{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;background:#121a29;border-bottom:1px solid var(--edge)}
+  header h1{font-size:16px;font-weight:700;letter-spacing:-.3px}
+  header h1 span{color:var(--accent)}
+  .sub{color:var(--muted);font-size:12px;margin-top:2px}
+  .badge{background:var(--panel2);border:1px solid #2f3c58;border-radius:20px;padding:5px 13px;font-size:12px;color:var(--muted)}
+  .badge b{color:var(--ok)}
+  .wrap{display:grid;grid-template-columns:1fr 336px;gap:16px;padding:16px 22px;max-width:1520px;margin:0 auto}
+  .col{display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;overflow:hidden}
+  .card h2{font-size:13px;font-weight:700;padding:12px 16px;border-bottom:1px solid var(--edge);display:flex;align-items:center;gap:8px}
+  .card h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--accent2)}
+  .card .body{padding:16px}
+
+  /* MAP */
+  .maptools{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;padding:10px 16px;border-bottom:1px solid var(--edge);background:var(--panel2)}
+  .maptools label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;font-weight:700}
+  .maptools select{background:var(--panel);border:1px solid #2f3c58;color:var(--text);border-radius:7px;padding:6px 10px;font-size:13px;font-weight:400;max-width:240px}
+  .tripstate{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700}
+  .maparea{position:relative;background:#0b111d}
+  svg{display:block;width:100%;height:auto}
+  #map #routeCase,#map #routeLine,#map #nodes,#map #dest,#map #car,#map #blocks{pointer-events:none}
+  .route-flow{stroke-dasharray:14 12;animation:flow 1s linear infinite}
+  @keyframes flow{to{stroke-dashoffset:-26}}
+  .reroute-blink{animation:blink .5s ease-in-out 6}
+  @keyframes blink{50%{opacity:.25}}
+  .waitpulse{animation:wpulse 1.2s ease-in-out infinite}
+  @keyframes wpulse{0%,100%{opacity:.9;r:14}50%{opacity:.25;r:20}}
+
+  /* nav strip (below map, does not cover it) */
+  .navstrip{display:flex;align-items:center;gap:18px;padding:12px 16px;border-top:1px solid var(--edge);background:var(--panel2)}
+  .navstrip .turn{display:flex;align-items:center;gap:11px;flex:1;min-width:0}
+  .navstrip .arrow{width:40px;height:40px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:21px;color:#fff;flex-shrink:0}
+  .navstrip .t1{font-weight:700;font-size:14px}
+  .navstrip .t2{color:var(--muted);font-size:12px}
+  .navstrip .eta{display:flex;gap:22px;flex-shrink:0}
+  .navstrip .eta div{text-align:center}
+  .navstrip .eta .big{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+  .navstrip .eta .big.ok{color:var(--ok)}
+  .navstrip .eta .lbl{font-size:11px;color:var(--muted)}
+  @media(max-width:640px){.navstrip{flex-wrap:wrap}}
+
+  /* reroute banner (top of map) */
+  .banner{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--warn);color:#1b1300;
+    font-weight:700;font-size:13px;padding:9px 18px;border-radius:24px;box-shadow:0 8px 20px rgba(0,0,0,.35);
+    display:none;align-items:center;gap:9px;white-space:nowrap}
+  .banner.show{display:flex}
+  .banner.done{background:var(--ok);color:#052012}
+  .spin{width:14px;height:14px;border:2px solid rgba(0,0,0,.35);border-top-color:#1b1300;border-radius:50%;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;padding:10px 16px;border-top:1px solid var(--edge);font-size:12px;color:var(--muted)}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+  /* time controls */
+  .timebar{padding:13px 16px;border-top:1px solid var(--edge)}
+  .timebar .row{display:flex;align-items:center;gap:12px}
+  input[type=range]{flex:1;accent-color:var(--accent)}
+  .clock{font-variant-numeric:tabular-nums;font-size:19px;font-weight:800;min-width:74px;color:var(--accent)}
+  .play{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 13px;font-weight:700;cursor:pointer;font-size:13px}
+  .play:hover{filter:brightness(1.1)}
+  .slots{display:flex;gap:3px;margin-top:10px}
+  .slot{flex:1;height:22px;border-radius:4px;background:var(--panel2);font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer}
+  .slot.blocked{background:rgba(255,84,112,.22);color:#ff8ca0;border:1px solid rgba(255,84,112,.5)}
+  .slot.now{outline:2px solid var(--accent)}
+
+  /* right panels */
+  .triplist{display:flex;flex-direction:column;gap:8px}
+  .trip{background:var(--panel2);border:1px solid #2f3c58;border-radius:9px;padding:10px 12px;cursor:pointer}
+  .trip.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .trip .top{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px}
+  .trip .path{color:var(--muted);font-size:12px;margin-top:4px}
+  .tag{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700}
+  .tag.ok{background:rgba(55,214,122,.15);color:var(--ok)}
+  .tag.re{background:rgba(255,176,32,.15);color:var(--warn)}
+  .tag.hold{background:rgba(255,84,112,.15);color:var(--danger)}
+  .kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed #2b3651;font-size:13px}
+  .kv:last-child{border:0}.kv span{color:var(--muted)}.kv b{font-variant-numeric:tabular-nums}
+  .btn-danger{width:100%;background:linear-gradient(90deg,#ff5470,#ff7a54);color:#fff;border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer;font-size:13px}
+  .btn-danger:hover{filter:brightness(1.08)}
+  .btn-ghost{width:100%;background:transparent;color:var(--muted);border:1px solid #2f3c58;border-radius:9px;padding:9px;cursor:pointer;font-size:12px;margin-top:8px}
+  .hint{color:var(--muted);font-size:12px;margin-bottom:11px}
+  .frow{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:11px}
+  .frow b{color:var(--warn);font-variant-numeric:tabular-nums}
+  .mini{margin-left:auto;background:transparent;border:1px solid #2f3c58;color:var(--muted);border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer}
+  .fld{display:block;font-size:12px;color:var(--muted);margin-bottom:10px}
+  .fld select,.fld input{margin-top:4px;background:var(--panel2);border:1px solid #2f3c58;color:var(--text);border-radius:7px;padding:7px 9px;font-size:13px}
+  .fld select{width:100%}
+  .fld input[type=number]{width:66px}
+  #wEnd{color:var(--text);margin-left:8px;font-variant-numeric:tabular-nums}
+  .btn-apply{width:100%;background:linear-gradient(90deg,#ff5470,#ff7a54);color:#fff;border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer;font-size:13px}
+  .btn-apply:disabled{opacity:.4;cursor:not-allowed}
+  .clist{margin-top:13px;display:flex;flex-direction:column;gap:7px}
+  .clist .none{color:var(--muted);font-size:12px}
+  .citem{background:var(--panel2);border:1px solid #2f3c58;border-left:3px solid var(--danger);border-radius:8px;padding:8px 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .citem small{color:var(--muted);display:block;margin-top:2px}
+  .citem.idle{opacity:.5;border-left-color:#4a5a7a}
+  .citem .x{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:15px;flex-shrink:0}
+  .citem .x:hover{color:var(--danger)}
+  .yardgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .cell{background:var(--panel2);border:1px solid #2f3c58;border-radius:7px;padding:9px 6px;text-align:center;font-size:11px;cursor:pointer;transition:border-color .12s}
+  .cell:hover{border-color:var(--accent)}
+  .cell .n{font-weight:700;font-size:13px;display:block;margin-bottom:3px}
+  .cell.hi{border-color:var(--accent2);background:rgba(0,194,168,.12)}
+  .cell.bad{opacity:.45}
+  .cell.placed{border-color:var(--accent);background:rgba(61,139,255,.12)}
+  .cell .bar{height:4px;border-radius:3px;background:#2f3c58;margin-top:5px;overflow:hidden}
+  .cell .bar i{display:block;height:100%;background:var(--accent2)}
+  .cell .mt{margin-top:5px;font-size:10px;color:var(--accent2);line-height:1.35}
+  .cell .rec{color:var(--accent2);font-weight:700;margin-top:4px}
+  /* mode toggle + fleet */
+  .modetog{display:inline-flex;border:1px solid #2f3c58;border-radius:8px;overflow:hidden;margin-left:auto}
+  .modetog button{background:transparent;border:0;color:var(--muted);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .modetog button.on{background:var(--accent);color:#fff}
+  body:not(.fleet) .m-fleet{display:none!important}
+  body.fleet .m-single{display:none!important}
+  body.fleet #car,body.fleet #carWait,body.fleet #routeLine,body.fleet #routeCase,body.fleet #dest,body.fleet #lots{display:none}
+  .fleetclock{font-variant-numeric:tabular-nums;font-weight:800;color:var(--accent);font-size:17px;min-width:66px}
+  .gantt{padding:14px 16px 4px}
+  .grow{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+  .glabel{width:34px;font-size:12px;font-weight:800;flex-shrink:0}
+  .gtrack{position:relative;flex:1;height:22px;background:var(--panel2);border-radius:5px;overflow:hidden}
+  .gseg{position:absolute;top:0;height:100%;font-size:9px;color:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:3px}
+  .gseg.dead{opacity:.32}
+  .gseg.svc{opacity:.85}
+  .gseg.blk{opacity:.5;background-image:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,.25) 3px,rgba(0,0,0,.25) 6px)}
+  .gplay{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;pointer-events:none}
+  .gaxis{display:flex;justify-content:space-between;margin:0 16px 12px 60px;font-size:9px;color:var(--muted)}
+  .jobrow{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:5px 0;border-bottom:1px dashed #2b3651}
+  .jobrow:last-child{border:0}
+  .jobrow .late{color:var(--danger);font-weight:700}
+  .jobrow .ont{color:var(--ok)}
+  footer{text-align:center;color:#5b6a86;font-size:11px;padding:20px}
+  @media(max-width:1100px){.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1><span>◆</span> 조선소 야드 이송 최적화 시스템 <span style="font-weight:400;color:var(--muted);font-size:13px">PROTOTYPE</span></h1>
+    <div class="sub">도로 봉쇄 직접 설정 · 시간대별 통로 가용성 반영 · 예외상황 자동 재탐색 · 적재 최적화</div>
+  </div>
+  <div class="badge">생산 APS 연동 <b>● LIVE</b></div>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: MAP -->
+  <div class="col">
+    <div class="card">
+      <h2><span class="dot"></span> 실시간 이송 경로 안내
+        <span class="modetog" id="modeTog">
+          <button data-m="single" class="on">단일 경로</button>
+          <button data-m="fleet">다차량 배차</button>
+        </span>
+      </h2>
+      <div class="maptools">
+        <label class="m-single">이송 건 <select id="tripSel"></select></label>
+        <span class="tripstate m-single" id="tripState"></span>
+        <label class="m-single">적치 위치 <select id="lotSel"></select></label>
+        <span class="m-fleet" style="display:flex;align-items:center;gap:10px">
+          <button class="play" id="fplay">▶ 재생</button>
+          <span class="fleetclock" id="fclock">06:00</span>
+          <span class="tripstate tag re" id="fleetInfo">배차 계산 전</span>
+        </span>
+      </div>
+      <div class="maparea">
+        <div class="banner" id="banner"></div>
+        <svg id="map" viewBox="0 0 900 520">
+          <rect x="0" y="0" width="900" height="520" fill="#0b111d"/>
+          <!-- ---- 조선소 야드 배경(참고: 실제 조선소 배치 조감도) — 좌측 육상야드 / 우측 안벽·바다 ---- -->
+          <g id="siteBg">
+            <!-- 상단 능선(배후 산지) -->
+            <path d="M 0,0 L 900,0 L 900,22 C 840,10 790,26 730,14 C 660,0 590,20 520,10
+                     C 450,0 380,18 310,8 C 240,-2 170,16 100,6 C 60,0 30,10 0,4 Z"
+                  fill="#0f1c14" opacity=".65"/>
+            <!-- 안벽/바다(우측, 물결형 해안선) -->
+            <path d="M 900,0 L 900,520 L 668,520
+                     C 706,478 626,442 664,394 C 702,346 700,304 624,262
+                     C 700,220 700,182 664,134 C 702,86 626,42 664,0 Z"
+                  fill="#0d2c40" opacity=".6"/>
+            <path d="M 900,0 L 900,520 L 668,520
+                     C 706,478 626,442 664,394 C 702,346 700,304 624,262
+                     C 700,220 700,182 664,134 C 702,86 626,42 664,0"
+                  fill="none" stroke="#1d5b78" stroke-width="1.5" opacity=".8"/>
+            <g stroke="#28718f" stroke-width="1" opacity=".4" fill="none">
+              <path d="M 760,50 q 18,9 0,18"/><path d="M 745,150 q 18,9 0,18"/>
+              <path d="M 800,240 q 18,9 0,18"/><path d="M 745,330 q 18,9 0,18"/>
+              <path d="M 760,440 q 18,9 0,18"/>
+            </g>
+            <!-- 안벽에서 정박 중인 선박(장식) -->
+            <g fill="#0b2233" stroke="#2c6b86" stroke-width="1" opacity=".85">
+              <path d="M 800,58 h44 l-6,12 h-32 z"/>
+              <path d="M 795,410 h48 l-6,12 h-36 z"/>
+            </g>
+            <!-- 좌측 육상야드 톤(연녹회색 톤, 참고 이미지의 초록 부지 느낌) -->
+            <rect x="0" y="0" width="640" height="520" fill="#0e1712" opacity=".35"/>
+          </g>
+          <!-- zones: 육상야드 주요 시설 -->
+          <g font-size="11" fill="#5a6a8c" font-family="'Malgun Gothic',sans-serif">
+            <rect x="20"  y="40"  width="140" height="90" rx="7" fill="#121c2d" stroke="#26314a"/><text x="30" y="58">강재 적치장</text>
+            <rect x="20"  y="386" width="140" height="90" rx="7" fill="#121c2d" stroke="#26314a"/><text x="30" y="404">블록 조립장</text>
+            <rect x="366" y="210" width="148" height="100" rx="7" fill="#121c2d" stroke="#26314a"/><text x="376" y="228">중앙 버퍼 야드</text>
+          </g>
+          <!-- zones: 도장공장(육상) + 도크·안벽 라벨(해안) -->
+          <g font-size="10" fill="#cfe3f0" font-family="'Malgun Gothic',sans-serif" text-anchor="middle"
+             paint-order="stroke" stroke="#0b111d" stroke-width="3" stroke-linejoin="round">
+            <text x="250" y="86">도장공장 1</text>
+            <text x="316" y="264">도장공장 2</text>
+            <text x="250" y="440">도장공장 3</text>
+            <text x="800" y="16">1도크</text>
+            <text x="800" y="112">2도크</text>
+            <text x="857" y="194">G1도크</text>
+            <text x="800" y="244">3도크</text>
+            <text x="857" y="324">OFD</text>
+            <text x="800" y="364">4도크</text>
+            <text x="857" y="444">G2도크</text>
+            <text x="760" y="504">의장 야드</text>
+          </g>
+          <g id="streets" stroke-linecap="round" fill="none"></g>
+          <g id="blocks"></g>
+          <path id="routeCase" fill="none" stroke="var(--route-case)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+          <path id="routeLine" class="route-flow" fill="none" stroke="var(--route)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+          <g id="nodes"></g>
+          <circle id="dest" r="9" fill="none" stroke="var(--ok)" stroke-width="3"/>
+          <circle id="carWait" r="14" fill="none" stroke="var(--warn)" stroke-width="2" opacity="0"/>
+          <g id="car">
+            <circle r="13" fill="rgba(61,139,255,.25)"/>
+            <circle r="7" fill="var(--accent)" stroke="#fff" stroke-width="2"/>
+            <polygon points="0,-4 11,0 0,4" fill="#fff"/>
+          </g>
+          <g id="hit"></g>
+          <g id="lots"></g>
+          <g id="fleet"></g>
+        </svg>
+      </div>
+
+      <div class="navstrip m-single">
+        <div class="turn">
+          <div class="arrow" id="turnArrow">↱</div>
+          <div>
+            <div class="t1" id="turnText">경로 계산 중…</div>
+            <div class="t2" id="turnDist">—</div>
+          </div>
+        </div>
+        <div class="eta">
+          <div><div class="big" id="etaMin">–</div><div class="lbl">도착 예정(분)</div></div>
+          <div><div class="big" id="etaDist">–</div><div class="lbl">남은 거리(m)</div></div>
+          <div><div class="big ok" id="etaHold">0</div><div class="lbl">지연(분)</div></div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span><i style="background:var(--street)"></i>통행 가능 통로</span>
+        <span><i style="background:var(--warn)"></i>선택 중 (클릭)</span>
+        <span><i style="background:var(--danger)"></i>봉쇄 구간</span>
+        <span class="m-single"><i style="background:var(--route)"></i>안내 경로</span>
+        <span class="m-single"><i style="background:var(--accent)"></i>이송 차량</span>
+        <span class="m-single"><i style="background:var(--ok)"></i>목적지</span>
+        <span class="m-fleet"><i style="background:#4aa3ff"></i>V1</span>
+        <span class="m-fleet"><i style="background:#ffb020"></i>V2</span>
+        <span class="m-fleet"><i style="background:#00c2a8"></i>V3</span>
+        <span class="m-fleet"><i style="background:#c98bff"></i>V4</span>
+      </div>
+
+      <div class="timebar m-single">
+        <div class="row">
+          <button class="play" id="play">▶ 시간 재생</button>
+          <input type="range" id="time" min="6" max="18" step="1" value="9">
+          <div class="clock" id="clock">09:00</div>
+        </div>
+        <div class="slots" id="slots"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot" style="background:var(--danger)"></span> 도로 봉쇄 설정</h2>
+      <div class="body">
+        <p class="hint">지도에서 봉쇄할 도로 구간을 클릭해 선택하세요. 여러 구간을 함께 선택할 수 있습니다.</p>
+        <div class="frow"><span>선택된 구간</span><b id="selCount">0 개</b>
+          <button class="mini" id="selClear">선택 해제</button></div>
+        <label class="fld">작업 유형
+          <select id="wType"></select></label>
+        <label class="fld">시작 시각
+          <select id="wStart"></select></label>
+        <label class="fld">소요 시간
+          <input type="number" id="wDur" min="1" max="12" value="3"> 시간
+          <span id="wEnd"></span></label>
+        <button class="btn-apply" id="applyClose" disabled>봉쇄 적용</button>
+        <button class="btn-ghost" id="cranePreset">⚠ 크레인 C3 고장 예시 추가</button>
+        <div class="clist" id="clist"></div>
+      </div>
+    </div>
+
+    <div class="card m-single">
+      <h2><span class="dot"></span> 적재 최적화 — 블록 야드 배치 추천</h2>
+      <div class="body">
+        <p style="color:var(--muted);font-size:12px;margin-bottom:12px"><b style="color:var(--text)">BLK-2041 (도장 완료, 148t)</b> 을 잠시 적치했다가 다음 공정 <b style="color:var(--text)">의장 야드</b> 로 반출. 각 칸마다 <b style="color:var(--text)">반입(도장→칸) + 반출(칸→의장)</b> 경로를 위 지도의 도로망·봉쇄를 반영해 계산하고 이송시간·가동률·접근로로 추천. 칸을 클릭하면 반입·반출 2개 이송 건이 생성돼 경로 안내·재탐색 대상에 포함됩니다.</p>
+        <div class="yardgrid" id="yardgrid"></div>
+      </div>
+    </div>
+
+    <div class="card m-fleet">
+      <h2><span class="dot"></span> 차량별 배차 스케줄 (Gantt)</h2>
+      <div class="gantt" id="gantt"></div>
+      <div class="gaxis" id="gaxis"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="col">
+    <div class="card m-single">
+      <h2><span class="dot"></span> 재계획 요약</h2>
+      <div class="body">
+        <div class="kv"><span>선택 이송 건 상태</span><b id="s0">정상</b></div>
+        <div class="kv"><span>영향받는 이송 건</span><b id="s1">0 건</b></div>
+        <div class="kv"><span>재탐색 소요시간</span><b id="s2">—</b></div>
+        <div class="kv"><span>경로 거리 변화</span><b id="s3">—</b></div>
+        <div class="kv"><span>보류 이송 건</span><b id="s6" style="color:var(--muted)">0 건</b></div>
+        <div class="kv"><span>전체 재계산 대비 절감</span><b id="s5" style="color:var(--ok)">—</b></div>
+      </div>
+    </div>
+
+    <div class="card m-fleet">
+      <h2><span class="dot"></span> 배차 최적화 결과</h2>
+      <div class="body">
+        <div class="kv"><span>완료 시각 (makespan)</span><b id="f_mk">—</b></div>
+        <div class="kv"><span>총 이동거리</span><b id="f_dist">—</b></div>
+        <div class="kv"><span>총 납기 지연</span><b id="f_late">—</b></div>
+        <div class="kv"><span>규칙(EDD 순차) 배차 대비</span><b id="f_vs" style="color:var(--ok)">—</b></div>
+        <div id="f_jobs" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Prototype · 합성 데이터 기반 시연용 화면 · 경로탐색은 격자 그래프 Dijkstra 데모</footer>
+
+<script>
+// ---------- graph (실제 조선소 배치도 참고: 좌측 육상야드 + 해안도로 + 도크 스퍼) ----------
+// 좌측 육상야드(적치장·조립장·도장공장·버퍼) — 우측 해안 간선도로에서 각 도크로 막다른 스퍼가 갈라짐.
+// 육상↔해안을 잇는 다리는 CN1/CN2 단 두 곳뿐이라, 이 두 구간이 막히면 전 도크가 고립되는
+// 실제 조선소형 병목 구조를 재현함(순수 격자보다 봉쇄 시나리오의 의미가 커짐).
+const pos={
+  ST:{x:90,y:90},  BA:{x:90,y:430},
+  P1:{x:250,y:110}, P2:{x:270,y:260}, P3:{x:250,y:410},
+  BUF:{x:440,y:260},
+  CN1:{x:560,y:150}, CN2:{x:560,y:370},
+  CB1:{x:650,y:40}, CB2:{x:650,y:150}, CB3:{x:630,y:260}, CB4:{x:650,y:370}, CB5:{x:650,y:480},
+  D1:{x:800,y:30}, D2:{x:800,y:130}, G1:{x:832,y:190},
+  D3:{x:800,y:260}, OFD:{x:832,y:320},
+  D4:{x:800,y:380}, G2:{x:832,y:440},
+  EQ:{x:760,y:480},
+};
+const POI={
+  ST:"강재 적치장", BA:"블록 조립장",
+  P1:"도장공장 1", P2:"도장공장 2", P3:"도장공장 3",
+  BUF:"중앙 버퍼 야드",
+  D1:"1도크", D2:"2도크", D3:"3도크", D4:"4도크",
+  G1:"G1도크", G2:"G2도크", OFD:"부유식독(OFD)", EQ:"의장 야드",
+};
+
+const edges=[
+  // 육상야드 내부
+  ["ST","P1"],["ST","BA"],["BA","P3"],["P1","P2"],["P2","P3"],["P2","BUF"],["P1","BUF"],["P3","BUF"],
+  // 육상↔해안 연결(병목 구간)
+  ["BUF","CN1"],["CN1","CB2"],["BUF","CN2"],["CN2","CB4"],
+  // 해안 간선도로
+  ["CB1","CB2"],["CB2","CB3"],["CB3","CB4"],["CB4","CB5"],
+  // 도크 스퍼(막다른 안벽 진입로)
+  ["CB1","D1"],["CB2","D2"],["CB2","G1"],["CB3","D3"],["CB3","OFD"],["CB4","D4"],["CB4","G2"],["CB5","EQ"],
+];
+const ek=(a,b)=>[a,b].sort().join("~");
+
+// ---- 곡선 도로 헬퍼: 간선마다 다른 방향/곡률로 완만하게 휘어지도록 ----
+function edgeCurveCtrl(a,b){
+  // 곡선 없이 직선 도로로: 제어점을 중점에 그대로 둬서 베지어가 직선으로 수렴
+  const A=pos[a],B=pos[b];
+  return {cx:(A.x+B.x)/2, cy:(A.y+B.y)/2};
+}
+function sampleEdge(a,b,n){
+  n=n||10;
+  const A=pos[a],B=pos[b],{cx,cy}=edgeCurveCtrl(a,b);
+  const pts=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n, mt=1-t;
+    pts.push({x:mt*mt*A.x+2*mt*t*cx+t*t*B.x, y:mt*mt*A.y+2*mt*t*cy+t*t*B.y});
+  }
+  return pts;
+}
+const edgeLenCache={};
+function edgeLen(a,b){
+  const key=ek(a,b);
+  if(edgeLenCache[key]!=null) return edgeLenCache[key];
+  const pts=sampleEdge(a,b,10);
+  let s=0; for(let i=1;i<pts.length;i++) s+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+  return edgeLenCache[key]=s;
+}
+// 노드 경로 -> 곡선 SVG path 문자열 + 애니메이션용 세분화 포인트/누적거리
+function curvePath(path,n){
+  n=n||10;
+  let d="M"+pos[path[0]].x+","+pos[path[0]].y;
+  const pts=[pos[path[0]]]; const cum=[0];
+  for(let i=1;i<path.length;i++){
+    const a=path[i-1],b=path[i],{cx,cy}=edgeCurveCtrl(a,b);
+    d+=` Q ${cx},${cy} ${pos[b].x},${pos[b].y}`;
+    const seg=sampleEdge(a,b,n);
+    for(let k=1;k<seg.length;k++){
+      pts.push(seg[k]);
+      cum.push(cum[cum.length-1]+Math.hypot(seg[k].x-seg[k-1].x,seg[k].y-seg[k-1].y));
+    }
+  }
+  return {d,pts,cum};
+}
+
+// ---- user-defined road closures ----
+const WORK_TYPES=["용접 작업","크레인 이동","블록 반출","도장 작업","강재 하역","기타 작업"];
+let cid=1;
+// each closure: {id, edges:[edgeKey...], type, start(hour), end(hour)}  -> blocks while start <= hour < end
+let closures=[
+  {id:cid++, edges:[ek("CN1","CB2")], type:"용접 작업", start:8,  end:13},
+  {id:cid++, edges:[ek("CB4","D4")],  type:"크레인 이동", start:10, end:15}
+];
+let selEdges=new Set();      // segments currently picked on the map (not yet applied)
+
+function closureActiveAt(cl,h){ return h>=cl.start && h<cl.end; }
+function anyBlockedAt(h){ return closures.some(cl=>closureActiveAt(cl,h)); }
+function activeClosures(){ return closures.filter(cl=>closureActiveAt(cl,curHour())); }
+
+let trips=[
+  {id:"TR-118",a:"ST",b:"D1",from:"강재 적치장",to:"1도크"},
+  {id:"TR-119",a:"BA",b:"D4",from:"블록 조립장",to:"4도크"},
+  {id:"TR-120",a:"BUF",b:"EQ",from:"버퍼 야드",to:"의장 야드"},
+  {id:"TR-121",a:"ST",b:"BUF",from:"강재 적치장",to:"버퍼 야드"},
+  {id:"TR-122",a:"EQ",b:"D1",from:"의장 야드",to:"1도크"},
+];
+
+let state={hour:9,sel:"TR-118",mode:"single"};
+let fleetClock=6, fleetPlaying=false, schedules={}, fleetStats=null, fleetDrawnHour=-1;
+// 현재 유효 시각: 단일 모드는 슬라이더, 다차량 모드는 시뮬 시계
+function curHour(){ return state.mode==="fleet" ? Math.max(6,Math.min(18,Math.floor(fleetClock))) : state.hour; }
+
+function blockedSet(){
+  const s=new Set();
+  activeClosures().forEach(cl=>cl.edges.forEach(e=>s.add(e)));
+  return s;
+}
+
+function dijkstra(src,dst,blocked){
+  const adj={};
+  edges.forEach(([a,b])=>{
+    if(blocked.has(ek(a,b)))return;
+    const w=edgeLen(a,b);
+    (adj[a]=adj[a]||[]).push([b,w]); (adj[b]=adj[b]||[]).push([a,w]);
+  });
+  const dist={},prev={},seen=new Set();
+  Object.keys(pos).forEach(k=>dist[k]=Infinity); dist[src]=0;
+  while(true){
+    let u=null,best=Infinity;
+    for(const k in dist){ if(!seen.has(k)&&dist[k]<best){best=dist[k];u=k;} }
+    if(u===null||u===dst)break; seen.add(u);
+    (adj[u]||[]).forEach(([v,w])=>{ if(dist[u]+w<dist[v]){dist[v]=dist[u]+w;prev[v]=u;} });
+  }
+  if(dist[dst]===Infinity)return null;
+  const path=[dst]; let c=dst; while(c!==src){c=prev[c];path.unshift(c);}
+  return path;
+}
+
+// ---------- rendering: static graph ----------
+const SVGNS="http://www.w3.org/2000/svg";
+function mk(t,attrs){const e=document.createElementNS(SVGNS,t);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+
+function drawStreets(){
+  const g=document.getElementById("streets"), bl=document.getElementById("blocks"),
+        nd=document.getElementById("nodes"), hit=document.getElementById("hit");
+  g.innerHTML="";bl.innerHTML="";nd.innerHTML="";hit.innerHTML="";
+  const blocked=blockedSet();
+  edges.forEach(([a,b])=>{
+    const key=ek(a,b), isB=blocked.has(key), isSel=selEdges.has(key);
+    const {cx,cy}=edgeCurveCtrl(a,b);
+    const d=`M ${pos[a].x},${pos[a].y} Q ${cx},${cy} ${pos[b].x},${pos[b].y}`;
+    if(isSel) g.appendChild(mk("path",{d,fill:"none",stroke:"var(--warn)","stroke-width":22,"stroke-linecap":"round",opacity:.5}));
+    if(isB)   g.appendChild(mk("path",{d,fill:"none",stroke:"rgba(255,84,112,.28)","stroke-width":22,"stroke-linecap":"round"}));
+    g.appendChild(mk("path",{d,fill:"none",stroke:isB?"var(--danger)":"var(--street)","stroke-width":14,"stroke-linecap":"round"}));
+    // invisible fat click target on top (same curve, so it stays clickable along the road)
+    const h=mk("path",{d,fill:"none",stroke:"transparent","stroke-width":22,"stroke-linecap":"round",style:"cursor:pointer"});
+    h.addEventListener("click",()=>toggleEdge(key));
+    hit.appendChild(h);
+  });
+  // one badge per active closure, at the centroid of its segments
+  activeClosures().forEach(cl=>{
+    let sx=0,sy=0,n=0;
+    cl.edges.forEach(e=>e.split("~").forEach(id=>{sx+=pos[id].x;sy+=pos[id].y;n++;}));
+    const cx=sx/n, cy=sy/n, label="🚧 "+cl.type+" ~"+String(cl.end).padStart(2,"0")+":00";
+    const w=label.length*10+22;
+    const bg=mk("g",{transform:`translate(${cx},${cy})`});
+    bg.appendChild(mk("rect",{x:-w/2,y:-13,width:w,height:26,rx:13,fill:"#2a1520",stroke:"var(--danger)","stroke-width":1.5}));
+    const tx=mk("text",{"text-anchor":"middle",y:4,"font-size":12,fill:"#ff9db0","font-family":"'Malgun Gothic',sans-serif"});
+    tx.textContent=label; bg.appendChild(tx); bl.appendChild(bg);
+  });
+  Object.keys(pos).forEach(k=>{
+    nd.appendChild(mk("circle",{cx:pos[k].x,cy:pos[k].y,r:POI[k]?6:3.5,fill:POI[k]?"var(--accent2)":"#3c4a68"}));
+  });
+}
+
+// ---------- route + car animation ----------
+let routePts=[], routeLen=[], carT=0, raf=null, lastTs=0, holdMin=0;
+let routeNodePts=[], routeNodeLen=[]; // 회전 안내용: 원래 노드 단위 경로(곡선 세분화 전)
+const PX2M=0.62, SPEED_PX=26; // px/sec
+
+function blockedSetAt(h){
+  const s=new Set();
+  closures.forEach(cl=>{ if(h>=cl.start&&h<cl.end) cl.edges.forEach(e=>s.add(e)); });
+  return s;
+}
+// [h0,h1) 구간 동안 한 번이라도 봉쇄되는 모든 간선
+function blockedUnion(h0,h1){
+  const s=new Set();
+  closures.forEach(cl=>{ if(cl.start<h1 && cl.end>h0) cl.edges.forEach(e=>s.add(e)); });
+  return s;
+}
+function nextClearHour(t){
+  for(let h=state.hour+1;h<=18;h++) if(dijkstra(t.a,t.b,blockedSetAt(h))) return h;
+  return null;
+}
+// 모든 이송 건의 상태(정상/재경로/보류)와 재개 시각을 현재 시각 기준으로 재계산
+function recomputeAllTags(){
+  const blocked=blockedSet();
+  trips.forEach(t=>{
+    const p=dijkstra(t.a,t.b,blocked);
+    if(!p){ t.tag="hold"; t.clearHour=nextClearHour(t); return; }
+    const base=dijkstra(t.a,t.b,new Set());
+    t.tag=(base && JSON.stringify(base)!==JSON.stringify(p))?"re":"ok";
+    t.clearHour=null;
+  });
+}
+
+function buildRoute(restart){
+  recomputeAllTags();
+  const blocked=blockedSet();
+  const t=trips.find(x=>x.id===state.sel);
+  const hold=t.tag==="hold";
+  const path=dijkstra(t.a,t.b,blocked)||dijkstra(t.a,t.b,new Set());
+  const cp=curvePath(path,10);
+  routePts=cp.pts; routeLen=cp.cum;
+  routeNodePts=path.map(k=>pos[k]);
+  routeNodeLen=[0];
+  for(let i=1;i<path.length;i++) routeNodeLen.push(routeNodeLen[i-1]+edgeLen(path[i-1],path[i]));
+  const d=cp.d;
+  const rl=document.getElementById("routeLine");
+  rl.setAttribute("d",d);
+  rl.setAttribute("stroke",hold?"#5b6a86":"var(--route)");
+  rl.setAttribute("stroke-dasharray",hold?"3 11":"");
+  rl.classList.toggle("route-flow",!hold);
+  document.getElementById("routeCase").setAttribute("d",hold?"":d);
+  document.getElementById("dest").setAttribute("cx",routePts[routePts.length-1].x);
+  document.getElementById("dest").setAttribute("cy",routePts[routePts.length-1].y);
+  if(restart||hold) carT=0;
+  else carT=Math.min(carT,routeLen[routeLen.length-1]-1);
+  renderTrips();
+}
+
+function carPose(dpx){
+  const total=routeLen[routeLen.length-1];
+  dpx=Math.max(0,Math.min(dpx,total));
+  let i=1; while(i<routeLen.length && routeLen[i]<dpx) i++;
+  if(i>=routeLen.length) i=routeLen.length-1;
+  const seg=routeLen[i]-routeLen[i-1]||1;
+  const f=(dpx-routeLen[i-1])/seg;
+  const A=routePts[i-1],B=routePts[i];
+  return {x:A.x+(B.x-A.x)*f, y:A.y+(B.y-A.y)*f, ang:Math.atan2(B.y-A.y,B.x-A.x)*180/Math.PI, segIdx:i};
+}
+
+function nextTurn(dpx){
+  // 회전 감지는 곡선 세부 점이 아니라 원래 노드 단위 경로 각도로 판단(자잘한 곡률에 오탐하지 않도록)
+  const total=routeNodeLen[routeNodeLen.length-1];
+  const t=Math.max(0,Math.min(dpx,total));
+  let ni=1; while(ni<routeNodeLen.length && routeNodeLen[ni]<t) ni++;
+  if(ni>=routeNodeLen.length) ni=routeNodeLen.length-1;
+  for(let i=ni;i<routeNodePts.length-1;i++){
+    const a=routeNodePts[i-1],b=routeNodePts[i],c=routeNodePts[i+1];
+    const a1=Math.atan2(b.y-a.y,b.x-a.x), a2=Math.atan2(c.y-b.y,c.x-b.x);
+    let dd=(a2-a1)*180/Math.PI; while(dd>180)dd-=360; while(dd<-180)dd+=360;
+    if(Math.abs(dd)>25){
+      const key=Object.keys(pos).find(k=>pos[k].x===b.x&&pos[k].y===b.y);
+      const dist=(routeNodeLen[i]-t)*PX2M;
+      return {dir:dd>0?"우회전":"좌회전", arrow:dd>0?"↱":"↰", name:POI[key]||"교차로 통과", dist:Math.max(0,dist)};
+    }
+  }
+  const key=Object.keys(pos).find(k=>pos[k].x===routeNodePts[routeNodePts.length-1].x&&pos[k].y===routeNodePts[routeNodePts.length-1].y);
+  return {dir:"목적지 도착", arrow:"◉", name:POI[key]||"목적지", dist:(total-t)*PX2M};
+}
+
+function frame(ts){
+  if(!lastTs)lastTs=ts;
+  const dt=Math.min((ts-lastTs)/1000,0.05); lastTs=ts;
+  if(state.mode==="fleet"){ fleetFrame(dt); raf=requestAnimationFrame(frame); return; }
+  const total=routeLen[routeLen.length-1];
+  const t=trips.find(x=>x.id===state.sel);
+  const hold=t.tag==="hold";
+  if(!hold){ carT+=SPEED_PX*dt; if(carT>total) carT=0; }
+  const p=carPose(carT);
+  document.getElementById("car").setAttribute("transform",`translate(${p.x},${p.y}) rotate(${hold?0:p.ang})`);
+  const cw=document.getElementById("carWait");
+  cw.setAttribute("cx",p.x); cw.setAttribute("cy",p.y);
+  cw.setAttribute("opacity",hold?"1":"0");
+  cw.classList.toggle("waitpulse",hold);
+  // nav card
+  const rem=(total-carT)*PX2M;
+  const nt=nextTurn(carT);
+  let reopen="작업 완료 후 재개";
+  if(hold) reopen = t.clearHour!=null
+      ? `가장 빠른 재개 ${String(t.clearHour).padStart(2,"0")}:00 · ${t.clearHour-state.hour}시간 후`
+      : "당일(18:00 내) 재개 불가";
+  document.getElementById("turnArrow").textContent=hold?"⏸":nt.arrow;
+  document.getElementById("turnText").textContent=hold?"통과 가능 경로 없음 — 대기":`${nt.name}에서 ${nt.dir}`;
+  document.getElementById("turnDist").textContent=hold?reopen:`${Math.round(nt.dist)} m 앞`;
+  document.getElementById("etaMin").textContent=hold?"–":Math.max(1,Math.ceil(rem/40)); // 데모용 환산
+  document.getElementById("etaDist").textContent=hold?"–":Math.round(rem);
+  document.getElementById("etaHold").textContent=holdMin;
+  document.getElementById("etaHold").className="big"+(holdMin?"":" ok");
+  raf=requestAnimationFrame(frame);
+}
+
+// ---------- reroute banner ----------
+let bannerTimer=null;
+function showReroute(){
+  const b=document.getElementById("banner");
+  clearTimeout(bannerTimer);
+  b.className="banner show";
+  b.innerHTML=`<span class="spin"></span> 통로 봉쇄 감지 — 경로 재탐색 중…`;
+  document.getElementById("routeLine").classList.add("reroute-blink");
+  bannerTimer=setTimeout(()=>{
+    const t=trips.find(x=>x.id===state.sel);
+    if(t.tag==="hold"){ b.className="banner show"; b.innerHTML="⚠ 대체 경로 없음 — 해당 작업 완료까지 이송 보류"; }
+    else { b.className="banner show done"; b.innerHTML="✔ 새 경로 적용 — 예상 지연 +"+holdMin+"분"; }
+    document.getElementById("routeLine").classList.remove("reroute-blink");
+    bannerTimer=setTimeout(()=>b.className="banner",2600);
+  },1500);
+}
+
+// ---------- panels ----------
+function renderSlots(){
+  const el=document.getElementById("slots");el.innerHTML="";
+  for(let h=6;h<=18;h++){
+    const d=document.createElement("div");
+    d.className="slot"+(anyBlockedAt(h)?" blocked":"")+(h===state.hour?" now":"");
+    d.textContent=h;
+    d.onclick=()=>{document.getElementById("time").value=h;setHour(h,true);};
+    el.appendChild(d);
+  }
+}
+function renderTrips(){
+  const sel=document.getElementById("tripSel");
+  sel.innerHTML="";
+  trips.forEach(t=>sel.add(new Option(`${t.id}  ·  ${t.from} → ${t.to}`,t.id)));
+  sel.value=state.sel;
+  const lab={ok:["정상","ok"],re:["재경로","re"],hold:["보류","hold"]};
+  const cur=trips.find(t=>t.id===state.sel);
+  const [x,cls]=lab[cur.tag||"ok"];
+  const ts=document.getElementById("tripState");
+  ts.textContent=x; ts.className="tripstate tag "+cls;
+  // summary
+  const affected=trips.filter(t=>t.tag&&t.tag!=="ok").length;
+  document.getElementById("s0").textContent={ok:"정상",re:"재경로 적용",hold:"보류"}[cur.tag||"ok"];
+  document.getElementById("s0").style.color=cur.tag==="hold"?"var(--danger)":cur.tag==="re"?"var(--warn)":"var(--ok)";
+  document.getElementById("s1").textContent=affected+" 건";
+  document.getElementById("s2").textContent=affected?"1.8 초":"—";
+  document.getElementById("s3").textContent=cur.tag==="re"?"+"+(6+Math.round(Math.random()*4))+" %":cur.tag==="hold"?"경로 없음":"±0 %";
+  document.getElementById("s5").textContent=affected?"약 92% (전체 재계산 대비)":"—";
+  const holds=trips.filter(t=>t.tag==="hold");
+  const s6=document.getElementById("s6");
+  if(!holds.length){ s6.textContent="0 건"; s6.style.color="var(--muted)"; }
+  else {
+    const ch=holds.map(t=>t.clearHour).filter(h=>h!=null);
+    s6.textContent=holds.length+"건"+(ch.length?` · 재개 ~${String(Math.max(...ch)).padStart(2,"0")}:00`:" · 당일 불가");
+    s6.style.color="var(--danger)";
+  }
+}
+// ---------- road-closure editor ----------
+function edgeLabel(key){
+  const [a,b]=key.split("~");
+  const nm=k=>POI[k]||("J"+k.replace("_","·"));
+  return nm(a)+"–"+nm(b);
+}
+function toggleEdge(key){
+  if(selEdges.has(key))selEdges.delete(key); else selEdges.add(key);
+  drawStreets(); refreshForm();
+}
+function refreshForm(){
+  document.getElementById("selCount").textContent=selEdges.size+" 개";
+  const st=+document.getElementById("wStart").value, du=+document.getElementById("wDur").value||1;
+  const end=Math.min(18,st+du);
+  document.getElementById("wEnd").textContent="→ 종료 "+String(end).padStart(2,"0")+":00";
+  document.getElementById("applyClose").disabled=selEdges.size===0;
+}
+function renderClist(){
+  const el=document.getElementById("clist");
+  if(!closures.length){ el.innerHTML='<div class="none">등록된 봉쇄 없음</div>'; return; }
+  el.innerHTML="";
+  closures.slice().sort((a,b)=>a.start-b.start).forEach(cl=>{
+    const active=closureActiveAt(cl,curHour());
+    const d=document.createElement("div");
+    d.className="citem"+(active?"":" idle");
+    d.innerHTML=`<div><b>${cl.type}</b> ${active?'· 진행 중':''}
+      <small>${String(cl.start).padStart(2,"0")}:00–${String(cl.end).padStart(2,"0")}:00 · ${cl.edges.length}개 구간 (${cl.edges.map(edgeLabel).join(", ")})</small></div>
+      <button class="x" title="해제">✕</button>`;
+    d.querySelector(".x").onclick=()=>{ closures=closures.filter(c=>c.id!==cl.id); afterClosureChange(); };
+    el.appendChild(d);
+  });
+}
+function afterClosureChange(){
+  drawStreets();renderSlots();renderClist();refreshForm();
+  if(state.mode==="fleet"){
+    runDispatch();
+    const b=document.getElementById("banner"); clearTimeout(bannerTimer);
+    b.className="banner show"; b.innerHTML='<span class="spin"></span> 봉쇄 반영 — 배차 재최적화…';
+    bannerTimer=setTimeout(()=>{ b.className="banner show done"; b.innerHTML="✔ 배차 재최적화 완료";
+      bannerTimer=setTimeout(()=>b.className="banner",2200); },1100);
+    return;
+  }
+  const before=trips.find(t=>t.id===state.sel).tag;
+  renderYard();
+  buildRoute(false);
+  const after=trips.find(t=>t.id===state.sel).tag;
+  if(after!=="ok" && before==="ok"){ holdMin=after==="hold"?24:8+Math.round(Math.random()*7); showReroute(); }
+  if(after==="ok") holdMin=0;
+}
+// 야드 칸 → 도로 그래프 노드에 매핑 (경로 최적화와 공유)
+const yardCells=[
+  {n:"B-01",d:"의장 근접",node:"EQ",u:38},
+  {n:"B-02",d:"도크 근접",node:"CB4",u:72},
+  {n:"B-03",d:"중앙 버퍼",node:"BUF",u:20},
+  {n:"B-04",d:"조립 근접",node:"P3",u:55},
+  {n:"B-05",d:"강재 근접",node:"P1",u:64},
+  {n:"B-06",d:"중앙",     node:"CB3",u:12},
+  {n:"B-07",d:"도크 근접",node:"CB2",u:44},
+  {n:"B-08",d:"의장 근접",node:"CB5",u:81},
+];
+const NEXT_PROC="EQ";              // BLK-2041 다음 공정 = 의장 야드
+const NEXT_PROC_NAME="의장 야드";
+const BLK_ORIGIN="P2";             // BLK-2041 현재 위치(도장공장 2)
+const BLK_ORIGIN_NAME="도장공장 2";
+
+function pathMeters(path){
+  let s=0; for(let i=1;i<path.length;i++) s+=edgeLen(path[i-1],path[i]);
+  return s*PX2M;
+}
+function accessBlocked(node,blocked){
+  return edges.some(([a,b])=>(a===node||b===node)&&blocked.has(ek(a,b)));
+}
+
+// 각 칸 점수: 반입(도장→칸) + 반출(칸→다음 공정) 이송시간 + 가동률/접근로 패널티
+function scoreCells(blocked){
+  return yardCells.map(c=>{
+    const pin=dijkstra(BLK_ORIGIN,c.node,blocked);
+    const pout=dijkstra(c.node,NEXT_PROC,blocked);
+    const acc=!accessBlocked(c.node,blocked);
+    if(!pin||!pout) return {...c,reachable:false,score:99999};
+    const mIn=pathMeters(pin), mOut=pathMeters(pout);
+    const minIn=Math.max(1,Math.ceil(mIn/40)), minOut=Math.max(1,Math.ceil(mOut/40));
+    const score=minIn+minOut + c.u*0.15 + (acc?0:35);
+    return {...c,reachable:true,acc,mIn,mOut,minIn,minOut,score};
+  }).sort((a,b)=>a.score-b.score);
+}
+
+function renderYard(){
+  const scored=scoreCells(blockedSet());
+  const best=scored[0];
+  const g=document.getElementById("yardgrid");g.innerHTML="";
+  scored.forEach(c=>{
+    const isBest=c===best, isPlaced=c.n===state.placedCell;
+    const el=document.createElement("div");
+    el.className="cell"+(isBest?" hi":"")+(c.reachable?"":" bad")+(isPlaced?" placed":"");
+    el.innerHTML=`<span class="n">${c.n}</span>${c.d}
+      <div class="bar"><i style="width:${c.u}%"></i></div>
+      <span style="color:var(--muted)">가동 ${c.u}%</span>
+      <div class="mt">${c.reachable
+        ? `반입 ${c.minIn}분 + 반출 ${c.minOut}분`+(c.acc?"":" · ⚠접근로 봉쇄")
+        : "경로 없음"}</div>
+      ${isPlaced?'<div class="rec" style="color:var(--accent)">● 적치됨</div>'
+        :isBest?'<div class="rec">★ 추천</div>':''}`;
+    el.onclick=()=>placeBlock(c.n);
+    g.appendChild(el);
+  });
+  // 지도 상단 '적치 위치' 드롭다운 (추천순 정렬)
+  const ls=document.getElementById("lotSel");
+  ls.innerHTML="";
+  ls.add(new Option("— 미배치 —",""));
+  scored.forEach(c=>{
+    const mark=(c===best?" ★추천":(c.n===state.placedCell?" ●적치":""));
+    const info=c.reachable?`${c.minIn+c.minOut}분`:"경로없음";
+    ls.add(new Option(`${c.n} · ${c.d} · ${info}${mark}`, c.n));
+  });
+  ls.value=state.placedCell||"";
+  drawLots(scored,best);
+}
+
+// 지도 위에 적치 칸(B-01~B-08) 표시
+function drawLots(scored,best){
+  scored=scored||scoreCells(blockedSet()); best=best||scored[0];
+  const g=document.getElementById("lots"); g.innerHTML="";
+  scored.forEach(c=>{
+    const p=pos[c.node], w=44,h=24;
+    const isBest=c===best, isPlaced=c.n===state.placedCell;
+    const grp=mk("g",{transform:`translate(${p.x},${p.y})`,style:"cursor:pointer"});
+    grp.appendChild(mk("rect",{x:-w/2,y:-h/2,width:w,height:h,rx:5,
+      fill:isPlaced?"rgba(61,139,255,.3)":"rgba(12,18,29,.62)",
+      stroke:isPlaced?"var(--accent)":isBest?"var(--accent2)":"#43506e",
+      "stroke-width":(isBest||isPlaced)?2:1}));
+    const t1=mk("text",{"text-anchor":"middle",y:-2,"font-size":9,fill:"#c7d2e8","font-weight":"700","font-family":"'Malgun Gothic',sans-serif"});
+    t1.textContent=c.n;
+    const t2=mk("text",{"text-anchor":"middle",y:9,"font-size":8,fill:c.reachable?"#7f8db0":"#ff8ca0"});
+    t2.textContent=c.reachable?(c.minIn+c.minOut)+"분":"불가";
+    grp.appendChild(t1);grp.appendChild(t2);
+    grp.addEventListener("click",()=>placeBlock(c.n));
+    g.appendChild(grp);
+  });
+  // 현재 위치 / 다음 공정 표식
+  const tag=(node,txt,col,dy)=>{
+    const p=pos[node];
+    const t=mk("text",{x:p.x,y:p.y+dy,"text-anchor":"middle","font-size":10,fill:col,"font-weight":"700","font-family":"'Malgun Gothic',sans-serif"});
+    t.textContent=txt; g.appendChild(t);
+  };
+  tag(BLK_ORIGIN,"▲ BLK-2041 현재","var(--warn)",34);
+  tag(NEXT_PROC,"▼ 다음 공정(의장)","var(--ok)",-24);
+}
+
+// 적치 칸 선택 → 반입/반출 2개 이송 건 생성 (경로 최적화에 편입)
+function placeBlock(name){
+  const c=yardCells.find(x=>x.n===name); if(!c)return;
+  state.placedCell=name;
+  trips=trips.filter(t=>t.id!=="PLACE_IN"&&t.id!=="PLACE_OUT");
+  trips.push({id:"PLACE_IN", a:BLK_ORIGIN,b:c.node,   from:BLK_ORIGIN_NAME, to:name+" 적치"});
+  trips.push({id:"PLACE_OUT",a:c.node,   b:NEXT_PROC, from:name+" 적치",    to:NEXT_PROC_NAME});
+  state.sel="PLACE_IN";
+  drawStreets();renderSlots();renderClist();
+  buildRoute(true);
+  renderYard();
+}
+function clearPlacement(){
+  state.placedCell=null;
+  trips=trips.filter(t=>t.id!=="PLACE_IN"&&t.id!=="PLACE_OUT");
+  if(state.sel==="PLACE_IN"||state.sel==="PLACE_OUT") state.sel="TR-118";
+  drawStreets();renderSlots();renderClist();
+  buildRoute(true);
+  renderYard();
+}
+
+// ---------- state transitions ----------
+function setHour(h){
+  state.hour=+h;
+  document.getElementById("clock").textContent=String(state.hour).padStart(2,"0")+":00";
+  const wasOk=trips.find(t=>t.id===state.sel).tag;
+  drawStreets();renderSlots();renderClist();renderYard();
+  buildRoute(false);
+  const nowTag=trips.find(t=>t.id===state.sel).tag;
+  if(nowTag!=="ok" && (wasOk==="ok"||wasOk===undefined)){ holdMin=nowTag==="hold"?24:8+Math.round(Math.random()*6); showReroute(); }
+  if(nowTag==="ok"){ holdMin=0; }
+}
+document.getElementById("time").addEventListener("input",e=>setHour(e.target.value));
+document.getElementById("tripSel").addEventListener("change",e=>{state.sel=e.target.value;buildRoute(true);});
+document.getElementById("lotSel").addEventListener("change",e=>{
+  if(e.target.value) placeBlock(e.target.value); else clearPlacement();
+});
+let playing=false,pt=null;
+document.getElementById("play").addEventListener("click",e=>{
+  playing=!playing;e.target.textContent=playing?"⏸ 정지":"▶ 시간 재생";
+  if(playing)pt=setInterval(()=>{let h=state.hour+1;if(h>18)h=6;document.getElementById("time").value=h;setHour(h);},1600);
+  else clearInterval(pt);
+});
+// --- closure form wiring ---
+const wType=document.getElementById("wType"), wStart=document.getElementById("wStart");
+WORK_TYPES.forEach(t=>wType.add(new Option(t,t)));
+for(let h=6;h<=17;h++) wStart.add(new Option(String(h).padStart(2,"0")+":00",h));
+wStart.value=state.hour;
+wType.addEventListener("change",refreshForm);
+wStart.addEventListener("change",refreshForm);
+document.getElementById("wDur").addEventListener("input",refreshForm);
+document.getElementById("selClear").addEventListener("click",()=>{selEdges.clear();drawStreets();refreshForm();});
+document.getElementById("applyClose").addEventListener("click",()=>{
+  if(!selEdges.size)return;
+  const st=+wStart.value, du=+document.getElementById("wDur").value||1;
+  closures.push({id:cid++,edges:[...selEdges],type:wType.value,start:st,end:Math.min(18,st+du)});
+  selEdges.clear();
+  afterClosureChange();
+});
+document.getElementById("cranePreset").addEventListener("click",()=>{
+  const st=state.hour;
+  closures.push({id:cid++,edges:[ek("CB2","CB3"),ek("CB3","CB4"),ek("CB3","D3"),ek("CB3","OFD")],
+    type:"크레인 C3 고장",start:st,end:Math.min(18,st+4)});
+  afterClosureChange();
+});
+
+// ================= 다차량 배차 (Fleet) =================
+const DEPOTS={V1:"ST",V2:"BA",V3:"D2",V4:"EQ"};
+const VCOL={V1:"#4aa3ff",V2:"#ffb020",V3:"#00c2a8",V4:"#c98bff"};
+const SERVICE=0.2; // 상·하차 서비스시간(시간)
+const fleetJobs=[
+  {id:"J1",from:"ST",to:"BUF",ready:6, due:9},
+  {id:"J2",from:"BA",to:"D4",ready:6, due:10},
+  {id:"J3",from:"EQ",to:"BUF",ready:7, due:11},
+  {id:"J4",from:"ST",to:"EQ",ready:8, due:13},
+  {id:"J5",from:"BUF",to:"D2",ready:9, due:12},
+  {id:"J6",from:"P3",to:"D1",ready:7, due:12},
+  {id:"J7",from:"D2",to:"BA",ready:10,due:15},
+  {id:"J8",from:"OFD",to:"EQ",ready:11,due:16},
+];
+function fmtH(x){ let h=Math.floor(x), m=Math.round((x-h)*60); if(m===60){h++;m=0;} return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"); }
+function nodeName(k){ return POI[k]||("J"+k.replace("_","·")); }
+
+// 출발 가능한 가장 이른 시각을 찾아 그때의 봉쇄를 회피한 경로를 반환.
+// 하루 종일 우회로가 없으면 infeasible.
+function legPath(a,b,h){
+  const start=Math.max(6,Math.min(18,Math.floor(h)));
+  for(let hh=start; hh<=18; hh++){
+    const p=dijkstra(a,b,blockedUnion(hh,hh+2));
+    if(p){
+      const cp=curvePath(p,10);
+      const meters=cp.cum[cp.cum.length-1]*PX2M;
+      return {pts:cp.pts,cum:cp.cum,meters,min:Math.max(1,Math.round(meters/40)), waitUntil: hh>Math.floor(h)? hh : null};
+    }
+  }
+  return {infeasible:true};
+}
+
+// 한 차량이 이송 건 j를 startAt/startClock 상태에서 수행하는 세그먼트 계획
+function planJob(startAt,startClock,j){
+  const segs=[]; let clock=startClock, at=startAt, meters=0;
+  const bail=()=>({segs:[...segs,{job:j.id,kind:"blocked",from:clock,to:18,at}],endClock:18,endAt:at,meters,late:Math.max(0,18-j.due),unserved:true});
+  // 상차지로 이동
+  const l1=legPath(at,j.from,clock);
+  if(l1.infeasible) return bail();
+  if(l1.waitUntil!=null && l1.waitUntil>clock){ segs.push({job:j.id,kind:"wait",from:clock,to:l1.waitUntil,at}); clock=l1.waitUntil; }
+  let arr=clock+l1.min/60;
+  segs.push({job:j.id,kind:"dead",from:clock,to:arr,pts:l1.pts,cum:l1.cum});
+  meters+=l1.meters; clock=arr; at=j.from;
+  // 준비시각 대기
+  if(j.ready>clock){ segs.push({job:j.id,kind:"wait",from:clock,to:j.ready,at}); clock=j.ready; }
+  segs.push({job:j.id,kind:"svc",from:clock,to:clock+SERVICE,at}); clock+=SERVICE;
+  // 하차지로 이동
+  const l2=legPath(at,j.to,clock);
+  if(l2.infeasible) return bail();
+  if(l2.waitUntil!=null && l2.waitUntil>clock){ segs.push({job:j.id,kind:"wait",from:clock,to:l2.waitUntil,at}); clock=l2.waitUntil; }
+  arr=clock+l2.min/60;
+  segs.push({job:j.id,kind:"load",from:clock,to:arr,pts:l2.pts,cum:l2.cum});
+  meters+=l2.meters; clock=arr; at=j.to;
+  segs.push({job:j.id,kind:"svc",from:clock,to:clock+SERVICE,at}); clock+=SERVICE;
+  return {segs,endClock:clock,endAt:at,meters,late:Math.max(0,clock-j.due),unserved:false};
+}
+
+function buildSchedules(order,forceVeh){
+  const jobs=order||[...fleetJobs].sort((a,b)=>a.due-b.due||a.ready-b.ready);
+  const V={}; Object.keys(DEPOTS).forEach(v=>V[v]={at:DEPOTS[v],clock:6,segs:[],jobCount:0});
+  const BAL=0.7; // 부하 분산: 이미 배정된 건수당 패널티(시간)
+  let totMeters=0;
+  jobs.forEach((j,idx)=>{
+    const cand = forceVeh ? [forceVeh(j,idx)] : Object.keys(V);
+    let bv=null,best=null,bcost=1e9;
+    cand.forEach(v=>{
+      const plan=planJob(V[v].at,V[v].clock,j);
+      const cost=plan.endClock + BAL*V[v].jobCount + (plan.unserved?100:0);
+      if(cost<bcost){ bcost=cost; best=plan; bv=v; }
+    });
+    const s=V[bv];
+    best.segs.forEach(sg=>s.segs.push(sg));
+    s.clock=best.endClock; s.at=best.endAt; s.jobCount++;
+    totMeters+=best.meters;
+    j._v=bv; j._done=best.endClock; j._late=best.late; j._unserved=best.unserved;
+  });
+  const makespan=Math.max(...Object.values(V).map(s=>s.clock));
+  const late=fleetJobs.reduce((a,j)=>a+(j._late||0),0);
+  return {V,stats:{makespan,meters:totMeters,late,unserved:fleetJobs.filter(j=>j._unserved).length}};
+}
+
+function runDispatch(){
+  const b=buildSchedules([...fleetJobs],(j,idx)=>"V"+(idx%4+1));  // 규칙 배차: 순번 배정
+  const o=buildSchedules(null,null);                             // 최적화: EDD + 최근접 삽입
+  schedules=o.V; fleetStats={opt:o.stats,base:b.stats};
+  renderGantt(); renderFleetStats();
+  document.getElementById("fleetInfo").textContent="배차 "+fleetJobs.length+"건 · 차량 4대";
+}
+
+function renderGantt(){
+  const g=document.getElementById("gantt"); g.innerHTML="";
+  const H0=6,SPAN=12;
+  Object.keys(DEPOTS).forEach(v=>{
+    const s=schedules[v]; const row=document.createElement("div"); row.className="grow";
+    const lab=document.createElement("div"); lab.className="glabel"; lab.style.color=VCOL[v]; lab.textContent=v;
+    const tr=document.createElement("div"); tr.className="gtrack";
+    (s?s.segs:[]).forEach(seg=>{
+      const el=document.createElement("div");
+      el.className="gseg"+(seg.kind==="dead"||seg.kind==="wait"?" dead":seg.kind==="svc"?" svc":seg.kind==="blocked"?" blk":"");
+      el.style.left=((seg.from-H0)/SPAN*100)+"%";
+      el.style.width=Math.max(0.4,(seg.to-seg.from)/SPAN*100)+"%";
+      el.style.background=seg.kind==="svc"?"#0e1726":seg.kind==="blocked"?"var(--danger)":VCOL[v];
+      if(seg.kind==="load") el.textContent=seg.job;
+      el.title=`${seg.job} · ${({dead:"공차이동",wait:"대기",svc:"상·하차",load:"적재이송",blocked:"우회 불가·대기"})[seg.kind]} · ${fmtH(seg.from)}~${fmtH(seg.to)}`;
+      tr.appendChild(el);
+    });
+    const ph=document.createElement("div"); ph.className="gplay";
+    ph.style.left=((fleetClock-H0)/SPAN*100)+"%";
+    tr.appendChild(ph);
+    row.appendChild(lab); row.appendChild(tr); g.appendChild(row);
+  });
+  const ax=document.getElementById("gaxis"); ax.innerHTML="";
+  for(let h=6;h<=18;h+=2){ const s=document.createElement("span"); s.textContent=h; ax.appendChild(s); }
+}
+
+function renderFleetStats(){
+  const o=fleetStats.opt, b=fleetStats.base;
+  document.getElementById("f_mk").textContent=fmtH(o.makespan);
+  document.getElementById("f_dist").textContent=Math.round(o.meters)+" m";
+  document.getElementById("f_late").textContent=Math.round(o.late*60)+" 분";
+  const dImp=Math.round((1-o.meters/(b.meters||1))*100);
+  const lTxt = b.late>0.01 ? `지연 ${Math.round((1-o.late/b.late)*100)}%↓` : (o.late<0.01?"지연 동일(0)":"—");
+  document.getElementById("f_vs").textContent=`거리 ${dImp>=0?dImp+"%↓":Math.abs(dImp)+"%↑"} · ${lTxt}`;
+  const jl=document.getElementById("f_jobs"); jl.innerHTML="";
+  fleetJobs.forEach(j=>{
+    const r=document.createElement("div"); r.className="jobrow";
+    r.innerHTML=`<span><b style="color:${VCOL[j._v]}">${j._v}</b> ${j.id} · ${nodeName(j.from)}→${nodeName(j.to)}</span>
+      <span class="${j._unserved||j._late>0?'late':'ont'}">${j._unserved?'미수행 (우회 불가)':j._late>0?'지연 +'+Math.round(j._late*60)+'분':'정시'}</span>`;
+    jl.appendChild(r);
+  });
+}
+
+function vehPoseAt(v,t){
+  const s=schedules[v];
+  if(!s||!s.segs.length){ const p=pos[DEPOTS[v]]; return {x:p.x,y:p.y,ang:0,moving:false}; }
+  if(t<=s.segs[0].from){ const p=pos[DEPOTS[v]]; return {x:p.x,y:p.y,ang:0,moving:false}; }
+  for(const seg of s.segs){
+    if(t>=seg.from && t<seg.to){
+      if(seg.pts && seg.pts.length>1){
+        const f=(t-seg.from)/(seg.to-seg.from);
+        const target=f*seg.cum[seg.cum.length-1];
+        let i=1; while(i<seg.cum.length && seg.cum[i]<target) i++;
+        if(i>=seg.pts.length) i=seg.pts.length-1;
+        const L=seg.cum[i]-seg.cum[i-1]||1, ff=(target-seg.cum[i-1])/L;
+        const A=seg.pts[i-1], B=seg.pts[i];
+        return {x:A.x+(B.x-A.x)*ff,y:A.y+(B.y-A.y)*ff,ang:Math.atan2(B.y-A.y,B.x-A.x)*180/Math.PI,moving:true,job:seg.job};
+      }
+      const p=pos[seg.at]||pos[DEPOTS[v]];
+      return {x:p.x,y:p.y,ang:0,moving:false,job:seg.job,svc:seg.kind==="svc",blocked:seg.kind==="blocked",wait:seg.kind==="wait"};
+    }
+  }
+  const last=s.segs[s.segs.length-1];
+  const p=last.pts?last.pts[last.pts.length-1]:pos[last.at];
+  return {x:p.x,y:p.y,ang:0,moving:false};
+}
+
+function fleetFrame(dt){
+  if(fleetPlaying){ fleetClock+=dt*0.55; if(fleetClock>18.4){ fleetClock=6; } }
+  const ch=Math.max(6,Math.min(18,Math.floor(fleetClock)));
+  if(ch!==fleetDrawnHour){ fleetDrawnHour=ch; drawStreets(); renderClist(); }
+  document.getElementById("fclock").textContent=fmtH(Math.min(18,fleetClock));
+  const g=document.getElementById("fleet"); g.innerHTML="";
+  Object.keys(DEPOTS).forEach(v=>{
+    const p=vehPoseAt(v,fleetClock);
+    const col=p.blocked?"var(--danger)":VCOL[v];
+    const grp=mk("g",{transform:`translate(${p.x},${p.y})`});
+    const car=mk("g",{transform:`rotate(${p.ang})`});
+    car.appendChild(mk("circle",{r:11,fill:p.moving?"rgba(255,255,255,.06)":"#0e1726",stroke:col,"stroke-width":2}));
+    car.appendChild(mk("polygon",{points:"0,-4 10,0 0,4",fill:p.moving?"#fff":col}));
+    grp.appendChild(car);
+    const lb=mk("text",{y:-15,"text-anchor":"middle","font-size":9,fill:col,"font-weight":"700","font-family":"'Malgun Gothic',sans-serif"});
+    lb.textContent=v+(p.job?" · "+p.job:"")+(p.blocked?" (우회불가)":p.wait?" (대기)":p.svc?" (하역)":"");
+    grp.appendChild(lb);
+    g.appendChild(grp);
+  });
+  document.querySelectorAll(".gplay").forEach(el=>el.style.left=((Math.min(18,fleetClock)-6)/12*100)+"%");
+}
+
+function setMode(m){
+  state.mode=m;
+  document.body.classList.toggle("fleet",m==="fleet");
+  document.querySelectorAll("#modeTog button").forEach(b=>b.classList.toggle("on",b.dataset.m===m));
+  if(m==="fleet"){ fleetDrawnHour=-1; runDispatch(); drawStreets(); renderClist(); }
+  else { document.getElementById("fleet").innerHTML=""; drawStreets(); renderClist(); buildRoute(false); renderYard(); }
+}
+document.querySelectorAll("#modeTog button").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.m)));
+document.getElementById("fplay").addEventListener("click",e=>{
+  fleetPlaying=!fleetPlaying; e.target.textContent=fleetPlaying?"⏸ 정지":"▶ 재생";
+});
+
+// init
+drawStreets();renderSlots();renderYard();renderClist();refreshForm();
+buildRoute(true);
+raf=requestAnimationFrame(frame);
+</script>
+</body>
+</html>
