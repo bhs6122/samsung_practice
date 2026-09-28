@@ -20,3 +20,8 @@ env/
 # OS 자동 생성 파일
 .DS_Store
 Thumbs.db
+
+# MLflow 실습 (DB와 artifacts는 로컬에만 보관)
+mlflow.db
+artifacts/
+mlruns/
