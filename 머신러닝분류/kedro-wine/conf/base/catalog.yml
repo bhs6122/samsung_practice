@@ -1,0 +1,37 @@
+wine_raw:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/wine.csv
+  load_args:
+    encoding: utf-8
+  metadata:
+    kedro-viz:
+      layer: raw
+
+train_data:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/train.parquet
+  metadata:
+    kedro-viz:
+      layer: model_input
+
+val_data:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/val.parquet
+
+test_data:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/test.parquet
+
+model:
+  type: pickle.PickleDataset
+  filepath: data/06_models/model.pkl
+
+metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/metrics.json
+
+predictions:
+  type: pandas.CSVDataset
+  filepath: data/07_model_output/predictions.csv
+  save_args:
+    index: false
